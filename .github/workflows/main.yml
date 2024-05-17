@@ -1,0 +1,216 @@
+name: Global Solution Onboarding - Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      location:
+        description: "azure resources deployment location"
+        type: choice
+        required: True
+        options:
+            - australiaeast
+            - westeurope
+            - westus
+          
+
+env:
+  service_tier: global
+  environment: "test" # path to directory containing bicep template
+  location:  "australiaeas"  # location for resource deployment in azure
+  test_subscription_id: "cef2460d-0ed3-4c43-ab44-2efa10dd34bb" # azure subscription id (not required for tenant level deployments)
+  oidc_app_reg_client_id: "e55a0432-ad8c-49b0-ad93-5f621fde422b" # client id of the azure application registration used to authenticate to azure using oidc, refer to https://learn.microsoft.com/en-us/azure/active-directory/develop/workload-identity-federation-create-trust?pivots=identity-wif-apps-methods-azp#github-actions
+  azure_tenant_id: "78be17d2-30b3-4f7d-91c9-236348af26d9" # azure ad tenant/directory id
+  workloadTier:  'global'
+
+
+jobs:
+  initialise_vars:
+    runs-on: windows-latest
+    outputs:
+      service_tier: ${{ env.service_tier }}
+      test_subscription_id: ${{ env.test_subscription_id }}
+      location: ${{ env.location }}
+      oidc_app_reg_client_id: ${{ env.oidc_app_reg_client_id }}
+      azure_tenant_id: ${{ env.azure_tenant_id }}
+      environment: ${{ env.environment }}
+      workloadTier: ${{ env.workloadTier }}
+    steps:
+      - name: Initialise Variables
+        run: echo "Initialising environment variables"
+
+  post_configuration:
+    needs: [initialise_vars]
+    runs-on: windows-latest
+    environment: ${{ needs.initialise_vars.outputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3.3.0
+
+      - name: Login to Azure
+        uses: azure/login@v1.4.6
+        with:
+          client-id: ${{ needs.initialise_vars.outputs.oidc_app_reg_client_id }}
+          tenant-id: ${{ needs.initialise_vars.outputs.azure_tenant_id }}
+          allow-no-subscriptions: true
+          enable-AzPSSession: true
+
+          
+
+      - name: Sets Github names based on conditions
+        uses: azure/powershell@v1
+        with:
+          inlineScript: |
+                # Search for the file named 'main.bicepparam'
+                $filePath = Get-ChildItem -Path "C:\your-search-directory" -Filter "main.bicepparam" -Recurse -ErrorAction SilentlyContinue
+                
+                if ($filePath) {
+                    # Read the file
+                    $fileContent = Get-Content -Path $filePath
+                
+                    # Search for a line starting with 'using '<space>'
+                    $lineIndex = $fileContent.IndexOf("using '")
+                    Write-Host $lineIndex
+                    if ($lineIndex -ge 0) {
+                        # Loop through the file content to find the next single quote
+                        $endQuoteIndex = $fileContent.IndexOf("'", $lineIndex + 3)
+                
+                        if ($endQuoteIndex -ge 0) {
+                            # Extract the file path from the line
+                            $fileToOpen = $fileContent[$lineIndex..($endQuoteIndex)]
+                            Write-Host $fileToOpen
+                            # Open the file
+                            $fileContent = Get-Content -Path $fileToOpen
+                            Write-host $fileContent
+                        } else {
+                            Write-Host "The end quote was not found in the file."
+                        }
+                    } else {
+                        Write-Host "A line starting with 'using '<space>' was not found in the file."
+                    }
+                } else {
+                    Write-Host "The file 'parameters.bicepparam' was not found."
+                }
+          
+          azPSVersion: latest    
+        
+    #   - name: Sets Custom names based on conditions
+    #     uses: azure/powershell@v1
+    #     with:
+    #       inlineScript: |
+    #         echo "spDevName=ea-custom-azure-${{ inputs.solutionShortName }}-dev" >> $env:GITHUB_ENV
+    #         echo "spProdName=ea-custom-azure-${{ inputs.solutionShortName }}-prod" >> $env:GITHUB_ENV
+    #       azPSVersion: latest 
+    #     if:  inputs.GithubOICDRequired == false
+          
+    #   - name: Creating a Service Principal Dev
+    #     if: inputs.environment == 'test'
+    #     uses: azure/powershell@v1
+    #     with:
+    #       inlineScript: |
+    #         # Install-Module Microsoft.Graph -Force -verbose
+    #         # Get-Module Microsoft.Graph
+    #         # Import-Module Microsoft.Graph -Force
+    #         $AccessToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
+    #         (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
+    #         $sec = ConvertTo-SecureString $AccessToken -AsPlainText -Force
+    #         Connect-MgGraph -AccessToken $sec
+    #         Import-Module Microsoft.Graph.Applications
+    #         $appName = "${{ env.spDevName }}"
+    #         $myApp = Get-MgApplication -Filter "DisplayName eq '$appName'" -ErrorAction SilentlyContinue        
+    #         if ($myApp) {
+    #             Write-Output "Application $appName already exists. Skipping creation..."
+    #         } else {
+    #             Write-Output "Application $appName does not exist and creating now."
+    #         $myApp = New-MgApplication -DisplayName "$appName"
+                
+    #             Write-Output "Application $appName created successfully."
+    #         }
+    #         $myApp 
+    #         echo "devObjectId=$myApp.ObjectId" >> $env:GITHUB_ENV
+    #         echo "devObjectName=$myApp.DisplayName" >> $env:GITHUB_ENV
+    #       azPSVersion: latest
+
+    #   - name: Github_Permissions
+    #     if: (inputs.environment == 'test' && needs.initialise_vars.outputs.GithubOICDRequired == true)
+    #     uses: azure/powershell@v1
+    #     with:
+    #       inlineScript: |
+    #         $myApp = Get-MgApplication -Filter "DisplayName eq '${{ env.devObjectName }}'" -ErrorAction SilentlyContinue
+    #         start-sleep -Seconds 300
+    #         $subscriptionId = (Get-AzContext).Subscription.Id
+    #         $tenantId = (Get-AzContext).Subscription.TenantId
+    #         $githubOrganisation = "eventsair"
+    #         $githubRepo = "${{ inputs.gitRepoName}}"
+    #         $gitBranch = "main"
+    #         $gitFederationName = "grp-azure-${{ env.solutionShortName }}-actions"
+    #         $clientId = $myApp.id
+    #         $policy = "repo:$githubOrganisation/$($githubRepo):ref:refs/heads/$gitBranch"
+    #         $creds = get-MgApplicationFederatedIdentityCredential -ApplicationId $myApp.id | where-object {$_.Subject -eq $policy}
+    #         if($creds){
+    #           Write-Output "Policy details $policy already exists. Skipping creation..."
+    #         } else {
+    #           $federatedApp = New-MgApplicationFederatedIdentityCredential -ApplicationId $clientId `
+    #           -Audiences api://AzureADTokenExchange -Issuer "https://token.actions.githubusercontent.com" -Name $gitFederationName -Subject $policy
+    #         }
+
+    #       azPSVersion: latest
+
+    #   - name: Preview a ResourceGroup Dev
+    #     if: inputs.environment == 'test'
+    #     run: |
+    #         az account set --subscription  ${{ env.test_subscription_id }}
+    #         az deployment sub what-if `
+    #         --name 'deploy_project_resourcegroup' `
+    #         --location '${{ inputs.location }}' `
+    #         --subscription ${{ env.test_subscription_id }} `
+    #         --template-file bicep/operations/resource-group/main.bicep `
+    #         --parameters `
+    #         location="${{ needs.initialise_vars.outputs.location }}" `
+    #         workloadTier="${{ needs.initialise_vars.outputs.workloadTier }}" `
+    #         deploymentEnvironment="${{ needs.initialise_vars.outputs.environment }}" `
+    #         solutionShortName="${{ needs.initialise_vars.outputs.solutionShortName }}" `
+    #         principalId="${{ env.devObjectId }}" `
+    #         resourceGroupOwnerRequired=${{inputs.ResourceGroupOwnerRequired}}
+
+    #     shell: pwsh
+
+    #   - name: Create a ResourceGroup Dev
+        if: inputs.environment == 'test'
+        run: |
+            az account set --subscription  ${{ env.test_subscription_id }}
+            az deployment sub create `
+            --name 'deploy_project_resourcegroup' `
+            --location '${{ inputs.location }}' `
+            --subscription ${{ env.test_subscription_id }} `
+            --template-file bicep/operations/resource-group/main.bicep `
+            --parameters `
+            location="${{ needs.initialise_vars.outputs.location }}" `
+            workloadTier="${{ needs.initialise_vars.outputs.workloadTier }}" `
+            deploymentEnvironment="${{ needs.initialise_vars.outputs.environment }}" `
+            solutionShortName="${{ needs.initialise_vars.outputs.solutionShortName }}" `
+            principalId="${{ env.devObjectId }}" `
+            resourceGroupOwnerRequired=${{inputs.ResourceGroupOwnerRequired}}
+
+        shell: pwsh
+  
+
+        if: inputs.environment == 'prod'
+        run: |
+            az account set --subscription  ${{ env.prod_subscription_id }}
+            az deployment sub create `
+            --name 'deploy_project_resourcegroup' `
+            --location '${{ inputs.location }}' `
+            --subscription ${{ env.prod_subscription_id }} `
+            --template-file bicep/operations/resource-group/main.bicep `
+            --parameters `
+            location="${{ needs.initialise_vars.outputs.location }}" `
+            workloadTier="${{ needs.initialise_vars.outputs.workloadTier }}" `
+            deploymentEnvironment="${{ needs.initialise_vars.outputs.environment }}" `
+            solutionShortName="${{ needs.initialise_vars.outputs.solutionShortName }}" `
+            principalId="${{ env.prodObjectId }}" `
+            resourceGroupOwnerRequired=${{inputs.ResourceGroupOwnerRequired}}
+
+        shell: pwsh
