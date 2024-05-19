@@ -59,11 +59,10 @@ jobs:
 
       - name: Get all changed param files
         id: changed-markdown-files
-        uses: tj-actions/changed-files@v42
+        uses: tj-actions/changed-files@v44
 
 
       - name: List all changed files markdown files
-        if: steps.changed-markdown-files.outputs.any_changed == 'true'
         env:
           ALL_CHANGED_FILES: ${{ steps.changed-markdown-files.outputs.all_changed_files }}
         run: |
