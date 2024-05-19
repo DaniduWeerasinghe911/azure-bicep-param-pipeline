@@ -57,44 +57,49 @@ jobs:
           allow-no-subscriptions: true
           enable-AzPSSession: true
 
+      - name: Get all changed param files
+        id: changed-markdown-files
+        uses: tj-actions/changed-files@v42
+        with:
+          files: |
+                **.bicepparam
+
+      - name: List all changed files markdown files
+        if: steps.changed-markdown-files.outputs.any_changed == 'true'
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-markdown-files.outputs.all_changed_files }}
+        run: |
+          for file in ${ALL_CHANGED_FILES}; do
+            echo "$file was changed"
+            echo ${{ steps.changed-markdown-files.outputs.all_changed_files }}
+          done          
           
 
-      - name: Sets Github names based on conditions
-        uses: azure/powershell@v1
-        with:
-          inlineScript: |
-                # Search for the file named 'main.bicepparam'
-                $filePath = Get-ChildItem -Path "C:\your-search-directory" -Filter "main.bicepparam" -Recurse -ErrorAction SilentlyContinue
-                
-                if ($filePath) {
-                    # Read the file
-                    $fileContent = Get-Content -Path $filePath
-                
-                    # Search for a line starting with 'using '<space>'
-                    $lineIndex = $fileContent.IndexOf("using '")
-                    Write-Host $lineIndex
-                    if ($lineIndex -ge 0) {
-                        # Loop through the file content to find the next single quote
-                        $endQuoteIndex = $fileContent.IndexOf("'", $lineIndex + 3)
-                
-                        if ($endQuoteIndex -ge 0) {
-                            # Extract the file path from the line
-                            $fileToOpen = $fileContent[$lineIndex..($endQuoteIndex)]
-                            Write-Host $fileToOpen
-                            # Open the file
-                            $fileContent = Get-Content -Path $fileToOpen
-                            Write-host $fileContent
-                        } else {
-                            Write-Host "The end quote was not found in the file."
-                        }
-                    } else {
-                        Write-Host "A line starting with 'using '<space>' was not found in the file."
-                    }
-                } else {
-                    Write-Host "The file 'parameters.bicepparam' was not found."
-                }
-          
-          azPSVersion: latest    
+      # - name: Sets Github names based on conditions
+      #   uses: azure/powershell@v1
+      #   with:
+      #     inlineScript: |
+      #           if ($filePath) {
+      #             # Read the file
+      #             $fileContent = Get-Content -Path $filePath
+      #             $searchPattern = "using"
+      #             $templateFilePath = $fileContent | ForEach-Object {
+      #                 # Check if the line contains the search pattern
+      #                 if ($_ -match $searchPattern) {
+      #                     # Capture the part between single quotes
+      #                     if ($_ -match "'([^']*)'") {
+      #                         $capturedText = $matches[1]
+      #                         Write-Output $capturedText
+      #                     }
+      #                 }
+      #             } 
+      #             $templateFilePath
+      #             }  
+      #           else {
+      #               Write-Host "A line starting with 'using '<space>' was not found in the file."
+      #           }
+              
+      #     azPSVersion: latest    
         
     #   - name: Sets Custom names based on conditions
     #     uses: azure/powershell@v1
