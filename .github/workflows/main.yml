@@ -40,7 +40,7 @@ jobs:
 
   post_configuration:
     needs: [initialise_vars]
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     environment: ${{ needs.initialise_vars.outputs.environment }}
     permissions:
       id-token: write
