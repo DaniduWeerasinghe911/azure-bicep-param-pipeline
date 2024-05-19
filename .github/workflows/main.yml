@@ -60,6 +60,10 @@ jobs:
       - name: Get all changed param files
         id: changed-markdown-files
         uses: tj-actions/changed-files@v44
+        with:
+          # Avoid using single or double quotes for multiline patterns
+          files: |
+             **.bicepparam
 
 
       - name: List all changed files markdown files
@@ -72,31 +76,34 @@ jobs:
           done          
           
 
-      # - name: Sets Github names based on conditions
-      #   uses: azure/powershell@v1
-      #   with:
-      #     inlineScript: |
-      #           if ($filePath) {
-      #             # Read the file
-      #             $fileContent = Get-Content -Path $filePath
-      #             $searchPattern = "using"
-      #             $templateFilePath = $fileContent | ForEach-Object {
-      #                 # Check if the line contains the search pattern
-      #                 if ($_ -match $searchPattern) {
-      #                     # Capture the part between single quotes
-      #                     if ($_ -match "'([^']*)'") {
-      #                         $capturedText = $matches[1]
-      #                         Write-Output $capturedText
-      #                     }
-      #                 }
-      #             } 
-      #             $templateFilePath
-      #             }  
-      #           else {
-      #               Write-Host "A line starting with 'using '<space>' was not found in the file."
-      #           }
+      - name: Sets Github names based on conditions
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-markdown-files.outputs.all_changed_files }}
+        uses: azure/powershell@v1
+        with:
+          inlineScript: |
+                $filePath=${ALL_CHANGED_FILES}
+                if ($filePath) {
+                  # Read the file
+                  $fileContent = Get-Content -Path $filePath
+                  $searchPattern = "using"
+                  $templateFilePath = $fileContent | ForEach-Object {
+                      # Check if the line contains the search pattern
+                      if ($_ -match $searchPattern) {
+                          # Capture the part between single quotes
+                          if ($_ -match "'([^']*)'") {
+                              $capturedText = $matches[1]
+                              Write-Output $capturedText
+                          }
+                      }
+                  } 
+                  $templateFilePath
+                  }  
+                else {
+                    Write-Host "A line starting with 'using '<space>' was not found in the file."
+                }
               
-      #     azPSVersion: latest    
+          azPSVersion: latest    
         
     #   - name: Sets Custom names based on conditions
     #     uses: azure/powershell@v1
