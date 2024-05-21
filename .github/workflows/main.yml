@@ -111,7 +111,7 @@ jobs:
           inlineScript: |
                   set-location -path ${{ env.paramRootPath }}
                   az account set --subscription  ${{ env.test_subscription_id }}
-                  az deployment sub what-if `
+                  az deployment sub create `
                   --name 'deploy_project_resourcegroup' `
                   --location '${{ env.location }}' `
                   --subscription ${{ env.test_subscription_id }} `
