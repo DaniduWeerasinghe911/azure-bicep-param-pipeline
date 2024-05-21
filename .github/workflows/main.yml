@@ -76,7 +76,7 @@ jobs:
         uses: azure/powershell@v1
         with:
           inlineScript: |
-                $filePath=${ALL_CHANGED_FILES}
+                $filePath=${{ env.ALL_CHANGED_FILES }}
                 if ($filePath) {
                   # Read the file
                   $fileContent = Get-Content -Path $filePath
