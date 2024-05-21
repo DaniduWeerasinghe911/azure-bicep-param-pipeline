@@ -93,6 +93,7 @@ jobs:
                   } 
                   $templateFilePath
                   $paramRootPath = Split-Path -parent $filePath
+                  $paramFileName = Split-Path -leaf $filePath
                   }  
                 else {
                     Write-Host "A line starting with 'using '<space>' was not found in the file."
@@ -100,6 +101,7 @@ jobs:
                 echo "paramFile=$filePath" >> $env:GITHUB_ENV
                 echo "templateFile=$templateFilePath" >> $env:GITHUB_ENV
                 echo "paramRootPath=$paramRootPath" >> $env:GITHUB_ENV
+                echo "paramFileName=$paramFileName" >> $env:GITHUB_ENV
               
           azPSVersion: latest    
   
@@ -114,7 +116,7 @@ jobs:
                   --location '${{ env.location }}' `
                   --subscription ${{ env.test_subscription_id }} `
                   --template-file ${{ env.templateFile }} `
-                  --parameters ${{ env.paramFile }}
+                  --parameters ${{ env.paramFileName }}
               
           azPSVersion: latest     
 
