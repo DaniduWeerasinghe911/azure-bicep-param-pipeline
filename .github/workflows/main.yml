@@ -76,7 +76,7 @@ jobs:
         uses: azure/powershell@v1
         with:
           inlineScript: |
-                $filePath=${{ env.ALL_CHANGED_FILES }}
+                $filePath= "${{ env.ALL_CHANGED_FILES }}"
                 if ($filePath) {
                   # Read the file
                   $fileContent = Get-Content -Path $filePath
@@ -96,9 +96,27 @@ jobs:
                 else {
                     Write-Host "A line starting with 'using '<space>' was not found in the file."
                 }
+                echo "paramFile=$filePath" >> $env:GITHUB_ENV
+                echo "templateFile=$templateFilePath" >> $env:GITHUB_ENV
               
           azPSVersion: latest    
-        
+  
+      - name: Preview a ResourceGroup Dev
+        uses: azure/powershell@v1
+        with:
+          inlineScript: |
+                  az account set --subscription  ${{ env.test_subscription_id }}
+                  az deployment sub what-if `
+                  --name 'deploy_project_resourcegroup' `
+                  --location '${{ env.location }}' `
+                  --subscription ${{ env.test_subscription_id }} `
+                  --template-file ${{ env.templateFile }} `
+                  --parameters ${{ env.paramFile }}
+              
+          azPSVersion: latest     
+
+
+
     #   - name: Sets Custom names based on conditions
     #     uses: azure/powershell@v1
     #     with:
