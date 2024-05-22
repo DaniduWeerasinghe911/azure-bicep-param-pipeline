@@ -126,10 +126,16 @@ jobs:
                   write-output $param.paramRootPath
                   write-output $param.templateFilePath
                   write-output $param.paramFileName 
-                  Write-Output "Current directory: $(Get-Location)"
                   Write-Output "Changing directory to second directory: $param.paramRootPath"
                   push-location $param.paramRootPath
-                  write-output "Current directory: $(Get-Location)"
+
+                  az account set --subscription  ${{ env.test_subscription_id }}
+                  az deployment sub what-if `
+                    --name 'deploy_project_resourcegroup' `
+                    --location '${{ env.location }}' `
+                    --subscription ${{ env.test_subscription_id }} `
+                    --template-file $param.templateFile `
+                    --parameters $param.paramFileName                
                   pop-location
                   write-output "Current directory: $(Get-Location)"
            
