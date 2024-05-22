@@ -110,7 +110,7 @@ jobs:
 
                 $jsonString = $Results | ConvertTo-Json
                 echo "paramFileArray=$jsonString" >> $env:GITHUB_ENV
-                Write-Host "${{ env.paramFileArray }}"
+                
           azPSVersion: latest    
   
       - name: Preview a Resource
