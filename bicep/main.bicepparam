@@ -2,5 +2,5 @@ using './main.bicep'
 
 param rgName = 'danidu-test'
 
-//Testasdasdasd
+//Testasdasdasdwd
 //tes3sdssdsdasdad
