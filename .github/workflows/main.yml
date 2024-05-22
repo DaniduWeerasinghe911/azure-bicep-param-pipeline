@@ -70,173 +70,79 @@ jobs:
           done          
           
 
-      - name: Sets Github names based on conditions
+      - name: Sets Environment Variables
         env:
           ALL_CHANGED_FILES: ${{ steps.changed-markdown-files.outputs.all_changed_files }}
         uses: azure/powershell@v1
         with:
           inlineScript: |
-                $filePath= "${{ env.ALL_CHANGED_FILES }}"
-                if ($filePath) {
-                  # Read the file
-                  $fileContent = Get-Content -Path $filePath
-                  $searchPattern = "using"
-                  $templateFilePath = $fileContent | ForEach-Object {
-                      # Check if the line contains the search pattern
-                      if ($_ -match $searchPattern) {
-                          # Capture the part between single quotes
-                          if ($_ -match "'([^']*)'") {
-                              $capturedText = $matches[1]
-                              Write-Output $capturedText
+                $Results = @()
+                $filePaths= "${{ env.ALL_CHANGED_FILES }}"
+                
+                if ($filePaths) {
+                  foreach ($filePath in $filePaths){
+                      $fileContent = Get-Content -Path $filePath
+                      $searchPattern = "using"
+                      $templateFilePath = $fileContent | ForEach-Object {
+                          # Check if the line contains the search pattern
+                          if ($_ -match $searchPattern) {
+                              # Capture the part between single quotes
+                              if ($_ -match "'([^']*)'") {
+                                  $capturedText = $matches[1]
+                                  Write-Output $capturedText
+                              }
                           }
-                      }
-                  } 
-                  $templateFilePath
-                  $paramRootPath = Split-Path -parent $filePath
-                  $paramFileName = Split-Path -leaf $filePath
+                      } 
+                      $templateFilePath
+                      $paramRootPath = Split-Path -parent $filePath
+                      $paramFileName = Split-Path -leaf $filePath
+                      $obj = New-Object -TypeName psobject 
+                      $obj | Add-member -name 'templateFilePath' -Membertype "Noteproperty" -Value $templateFilePath
+                      $obj | Add-member -name 'paramRootPath' -Membertype "Noteproperty" -Value $paramRootPath
+                      $obj | Add-member -name 'paramFileName' -Membertype "Noteproperty" -Value $paramFileName
+                      $Results += $obj
+                    }
                   }  
                 else {
                     Write-Host "A line starting with 'using '<space>' was not found in the file."
                 }
-                echo "paramFile=$filePath" >> $env:GITHUB_ENV
-                echo "templateFile=$templateFilePath" >> $env:GITHUB_ENV
-                echo "paramRootPath=$paramRootPath" >> $env:GITHUB_ENV
-                echo "paramFileName=$paramFileName" >> $env:GITHUB_ENV
+
+
+                echo "paramFileArray=$Results" >> $env:GITHUB_ENV
               
           azPSVersion: latest    
   
-      - name: Preview a ResourceGroup Dev
+      - name: Preview a Resource
         uses: azure/powershell@v1
         with:
           inlineScript: |
-                  set-location -path ${{ env.paramRootPath }}
+            $params = ${{ env.paramFileArray }}
+            foreach ($param in $params){
+                  set-location -path $param.paramRootPath
                   az account set --subscription  ${{ env.test_subscription_id }}
-                  az deployment sub create `
-                  --name 'deploy_project_resourcegroup' `
-                  --location '${{ env.location }}' `
-                  --subscription ${{ env.test_subscription_id }} `
-                  --template-file ${{ env.templateFile }} `
-                  --parameters ${{ env.paramFileName }}
-              
+                  az deployment sub what-if `
+                    --name 'deploy_project_resourcegroup' `
+                    --location '${{ env.location }}' `
+                    --subscription ${{ env.test_subscription_id }} `
+                    --template-file $param.templateFile `
+                    --parameters $param.paramFileName
+            }
           azPSVersion: latest     
 
 
-
-    #   - name: Sets Custom names based on conditions
-    #     uses: azure/powershell@v1
-    #     with:
-    #       inlineScript: |
-    #         echo "spDevName=ea-custom-azure-${{ inputs.solutionShortName }}-dev" >> $env:GITHUB_ENV
-    #         echo "spProdName=ea-custom-azure-${{ inputs.solutionShortName }}-prod" >> $env:GITHUB_ENV
-    #       azPSVersion: latest 
-    #     if:  inputs.GithubOICDRequired == false
-          
-    #   - name: Creating a Service Principal Dev
-    #     if: inputs.environment == 'test'
-    #     uses: azure/powershell@v1
-    #     with:
-    #       inlineScript: |
-    #         # Install-Module Microsoft.Graph -Force -verbose
-    #         # Get-Module Microsoft.Graph
-    #         # Import-Module Microsoft.Graph -Force
-    #         $AccessToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
-    #         (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
-    #         $sec = ConvertTo-SecureString $AccessToken -AsPlainText -Force
-    #         Connect-MgGraph -AccessToken $sec
-    #         Import-Module Microsoft.Graph.Applications
-    #         $appName = "${{ env.spDevName }}"
-    #         $myApp = Get-MgApplication -Filter "DisplayName eq '$appName'" -ErrorAction SilentlyContinue        
-    #         if ($myApp) {
-    #             Write-Output "Application $appName already exists. Skipping creation..."
-    #         } else {
-    #             Write-Output "Application $appName does not exist and creating now."
-    #         $myApp = New-MgApplication -DisplayName "$appName"
-                
-    #             Write-Output "Application $appName created successfully."
-    #         }
-    #         $myApp 
-    #         echo "devObjectId=$myApp.ObjectId" >> $env:GITHUB_ENV
-    #         echo "devObjectName=$myApp.DisplayName" >> $env:GITHUB_ENV
-    #       azPSVersion: latest
-
-    #   - name: Github_Permissions
-    #     if: (inputs.environment == 'test' && needs.initialise_vars.outputs.GithubOICDRequired == true)
-    #     uses: azure/powershell@v1
-    #     with:
-    #       inlineScript: |
-    #         $myApp = Get-MgApplication -Filter "DisplayName eq '${{ env.devObjectName }}'" -ErrorAction SilentlyContinue
-    #         start-sleep -Seconds 300
-    #         $subscriptionId = (Get-AzContext).Subscription.Id
-    #         $tenantId = (Get-AzContext).Subscription.TenantId
-    #         $githubOrganisation = "eventsair"
-    #         $githubRepo = "${{ inputs.gitRepoName}}"
-    #         $gitBranch = "main"
-    #         $gitFederationName = "grp-azure-${{ env.solutionShortName }}-actions"
-    #         $clientId = $myApp.id
-    #         $policy = "repo:$githubOrganisation/$($githubRepo):ref:refs/heads/$gitBranch"
-    #         $creds = get-MgApplicationFederatedIdentityCredential -ApplicationId $myApp.id | where-object {$_.Subject -eq $policy}
-    #         if($creds){
-    #           Write-Output "Policy details $policy already exists. Skipping creation..."
-    #         } else {
-    #           $federatedApp = New-MgApplicationFederatedIdentityCredential -ApplicationId $clientId `
-    #           -Audiences api://AzureADTokenExchange -Issuer "https://token.actions.githubusercontent.com" -Name $gitFederationName -Subject $policy
-    #         }
-
-    #       azPSVersion: latest
-
-    #   - name: Preview a ResourceGroup Dev
-    #     if: inputs.environment == 'test'
-    #     run: |
-    #         az account set --subscription  ${{ env.test_subscription_id }}
-    #         az deployment sub what-if `
-    #         --name 'deploy_project_resourcegroup' `
-    #         --location '${{ inputs.location }}' `
-    #         --subscription ${{ env.test_subscription_id }} `
-    #         --template-file bicep/operations/resource-group/main.bicep `
-    #         --parameters `
-    #         location="${{ needs.initialise_vars.outputs.location }}" `
-    #         workloadTier="${{ needs.initialise_vars.outputs.workloadTier }}" `
-    #         deploymentEnvironment="${{ needs.initialise_vars.outputs.environment }}" `
-    #         solutionShortName="${{ needs.initialise_vars.outputs.solutionShortName }}" `
-    #         principalId="${{ env.devObjectId }}" `
-    #         resourceGroupOwnerRequired=${{inputs.ResourceGroupOwnerRequired}}
-
-    #     shell: pwsh
-
-    #   - name: Create a ResourceGroup Dev
-        # if: inputs.environment == 'test'
-        # run: |
-        #     az account set --subscription  ${{ env.test_subscription_id }}
-        #     az deployment sub create `
-        #     --name 'deploy_project_resourcegroup' `
-        #     --location '${{ inputs.location }}' `
-        #     --subscription ${{ env.test_subscription_id }} `
-        #     --template-file bicep/operations/resource-group/main.bicep `
-        #     --parameters `
-        #     location="${{ needs.initialise_vars.outputs.location }}" `
-        #     workloadTier="${{ needs.initialise_vars.outputs.workloadTier }}" `
-        #     deploymentEnvironment="${{ needs.initialise_vars.outputs.environment }}" `
-        #     solutionShortName="${{ needs.initialise_vars.outputs.solutionShortName }}" `
-        #     principalId="${{ env.devObjectId }}" `
-        #     resourceGroupOwnerRequired=${{inputs.ResourceGroupOwnerRequired}}
-
-        # shell: pwsh
-  
-
-        # if: inputs.environment == 'prod'
-        # run: |
-        #     az account set --subscription  ${{ env.prod_subscription_id }}
-        #     az deployment sub create `
-        #     --name 'deploy_project_resourcegroup' `
-        #     --location '${{ inputs.location }}' `
-        #     --subscription ${{ env.prod_subscription_id }} `
-        #     --template-file bicep/operations/resource-group/main.bicep `
-        #     --parameters `
-        #     location="${{ needs.initialise_vars.outputs.location }}" `
-        #     workloadTier="${{ needs.initialise_vars.outputs.workloadTier }}" `
-        #     deploymentEnvironment="${{ needs.initialise_vars.outputs.environment }}" `
-        #     solutionShortName="${{ needs.initialise_vars.outputs.solutionShortName }}" `
-        #     principalId="${{ env.prodObjectId }}" `
-        #     resourceGroupOwnerRequired=${{inputs.ResourceGroupOwnerRequired}}
-
-        # shell: pwsh
+      - name: Deploy a Resource
+        uses: azure/powershell@v1
+        with:
+          inlineScript: |
+            $params = ${{ env.paramFileArray }}
+            foreach ($param in $params){
+                  set-location -path $param.paramRootPath
+                  az account set --subscription  ${{ env.test_subscription_id }}
+                  az deployment sub create `
+                    --name 'deploy_project_resourcegroup' `
+                    --location '${{ env.location }}' `
+                    --subscription ${{ env.test_subscription_id }} `
+                    --template-file $param.templateFile `
+                    --parameters $param.paramFileName
+            }
+          azPSVersion: latest 
