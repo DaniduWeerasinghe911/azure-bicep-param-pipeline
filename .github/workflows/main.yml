@@ -130,7 +130,7 @@ jobs:
                   Write-Output "Changing directory to second directory: $param.paramRootPath"
                   push-location $param.paramRootPath
                   write-output "Current directory: $(Get-Location)"
-                  pull-location
+                  pop-location
                   write-output "Current directory: $(Get-Location)"
            
             }
