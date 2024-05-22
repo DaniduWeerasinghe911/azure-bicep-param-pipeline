@@ -102,6 +102,7 @@ jobs:
                       $obj | Add-member -name 'paramFileName' -Membertype "Noteproperty" -Value $paramFileName
                       $Results += $obj
                     }
+                    Write-Host $Results
                   }  
                 else {
                     Write-Host "A line starting with 'using '<space>' was not found in the file."
