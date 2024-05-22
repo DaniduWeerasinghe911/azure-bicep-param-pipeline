@@ -78,9 +78,9 @@ jobs:
           inlineScript: |
                 $Results = @()
                 $filePaths= "${{ env.ALL_CHANGED_FILES }}"
-                
-                if ($filePaths) {
-                  foreach ($filePath in $filePaths){
+                $splitFilePaths =$filePaths.Split(" ")
+                if ($splitFilePaths) {
+                  foreach ($filePath in $splitFilePaths){
                       $fileContent = Get-Content -Path $filePath
                       $searchPattern = "using"
                       $templateFilePath = $fileContent | ForEach-Object {
