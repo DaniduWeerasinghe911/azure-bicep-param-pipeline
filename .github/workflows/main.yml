@@ -109,9 +109,8 @@ jobs:
                 }
 
                 $jsonString = $Results | ConvertTo-Json
-                $escapedJsonString = $jsonString -replace "'", "''"
-
-                echo "paramFileArray=$escapedJsonString" >> $env:GITHUB_ENV
+                
+                echo "paramFileArray="$jsonString"" >> $env:GITHUB_ENV
                 
           azPSVersion: latest    
   
