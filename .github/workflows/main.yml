@@ -109,7 +109,7 @@ jobs:
 
 
                 echo "paramFileArray=$Results" >> $env:GITHUB_ENV
-              
+                Write-Host "${{ env.paramFileArray }}"
           azPSVersion: latest    
   
       - name: Preview a Resource
