@@ -121,7 +121,11 @@ jobs:
           inlineScript: |
             $params = Get-Content objectArray.json
             $objectArrayFromJson = $params | ConvertFrom-Json
+            write-output $objectArrayFromJson
             foreach ($param in $objectArrayFromJson){
+                  write-output $param.paramRootPath
+                  write-output $param.templateFilePath
+                  write-output $param.paramFileName 
                   set-location -path $param.paramRootPath
                   az account set --subscription  ${{ env.test_subscription_id }}
                   az deployment sub what-if `
