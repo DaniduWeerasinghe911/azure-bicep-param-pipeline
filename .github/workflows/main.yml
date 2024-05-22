@@ -108,8 +108,8 @@ jobs:
                     Write-Host "A line starting with 'using '<space>' was not found in the file."
                 }
 
-
-                echo "paramFileArray=$Results" >> $env:GITHUB_ENV
+                $jsonString = $Results | ConvertTo-Json
+                echo "paramFileArray=$jsonString" >> $env:GITHUB_ENV
                 Write-Host "${{ env.paramFileArray }}"
           azPSVersion: latest    
   
@@ -117,7 +117,7 @@ jobs:
         uses: azure/powershell@v1
         with:
           inlineScript: |
-            $params = ${{ env.paramFileArray }}
+            $params = ${{ env.paramFileArray }} | ConvertFrom-Json
             foreach ($param in $params){
                   set-location -path $param.paramRootPath
                   az account set --subscription  ${{ env.test_subscription_id }}
@@ -135,7 +135,7 @@ jobs:
         uses: azure/powershell@v1
         with:
           inlineScript: |
-            $params = ${{ env.paramFileArray }}
+            $params = ${{ env.paramFileArray }} | ConvertFrom-Json
             foreach ($param in $params){
                   set-location -path $param.paramRootPath
                   az account set --subscription  ${{ env.test_subscription_id }}
