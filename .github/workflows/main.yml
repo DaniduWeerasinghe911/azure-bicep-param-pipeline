@@ -128,32 +128,29 @@ jobs:
                   write-output $param.paramFileName 
                   Write-Output "Current directory: $(Get-Location)"
                   Write-Output "Changing directory to second directory: $param.paramRootPath"
-                  # set-location -path $param.paramRootPath
-                  # az account set --subscription  ${{ env.test_subscription_id }}
-                  # az deployment sub what-if `
-                  #   --name 'deploy_project_resourcegroup' `
-                  #   --location '${{ env.location }}' `
-                  #   --subscription ${{ env.test_subscription_id }} `
-                  #   --template-file $param.templateFile `
-                  #   --parameters $param.paramFileName
+                  push-location $param.paramRootPath
+                  write-output "Current directory: $(Get-Location)"
+                  pull-location
+                  write-output "Current directory: $(Get-Location)"
+           
             }
           azPSVersion: latest     
 
 
-      - name: Deploy a Resource
-        uses: azure/powershell@v1
-        with:
-          inlineScript: |
-            $params = Get-Content objectArray.json
-            $objectArrayFromJson = $params | ConvertFrom-Json
-            foreach ($param in $objectArrayFromJson){
-                  set-location -path $param.paramRootPath
-                  az account set --subscription  ${{ env.test_subscription_id }}
-                  az deployment sub create `
-                    --name 'deploy_project_resourcegroup' `
-                    --location '${{ env.location }}' `
-                    --subscription ${{ env.test_subscription_id }} `
-                    --template-file $param.templateFile `
-                    --parameters $param.paramFileName
-            }
-          azPSVersion: latest 
+      # - name: Deploy a Resource
+      #   uses: azure/powershell@v1
+      #   with:
+      #     inlineScript: |
+      #       $params = Get-Content objectArray.json
+      #       $objectArrayFromJson = $params | ConvertFrom-Json
+      #       foreach ($param in $objectArrayFromJson){
+      #             set-location -path $param.paramRootPath
+      #             az account set --subscription  ${{ env.test_subscription_id }}
+      #             az deployment sub create `
+      #               --name 'deploy_project_resourcegroup' `
+      #               --location '${{ env.location }}' `
+      #               --subscription ${{ env.test_subscription_id }} `
+      #               --template-file $param.templateFile `
+      #               --parameters $param.paramFileName
+      #       }
+      #     azPSVersion: latest 
