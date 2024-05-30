@@ -11,9 +11,9 @@ env:
   service_tier: global
   environment: "test" # path to directory containing bicep template
   location:  "australiaeast"  # location for resource deployment in azure
-  test_subscription_id: "cef2460d-0ed3-4c43-ab44-2efa10dd34bb" # azure subscription id (not required for tenant level deployments)
-  oidc_app_reg_client_id: "e55a0432-ad8c-49b0-ad93-5f621fde422b" # client id of the azure application registration used to authenticate to azure using oidc, refer to https://learn.microsoft.com/en-us/azure/active-directory/develop/workload-identity-federation-create-trust?pivots=identity-wif-apps-methods-azp#github-actions
-  azure_tenant_id: "78be17d2-30b3-4f7d-91c9-236348af26d9" # azure ad tenant/directory id
+  test_subscription_id: "" # azure subscription id (not required for tenant level deployments)
+  oidc_app_reg_client_id: "" # client id of the azure application registration used to authenticate to azure using oidc, refer to https://learn.microsoft.com/en-us/azure/active-directory/develop/workload-identity-federation-create-trust?pivots=identity-wif-apps-methods-azp#github-actions
+  azure_tenant_id: "" # azure ad tenant/directory id
   workloadTier:  'global'
 
 
@@ -136,21 +136,20 @@ jobs:
             }
           azPSVersion: latest     
 
-      - name: Deploy a Resource
-        uses: azure/powershell@v1
-        with:
-          inlineScript: |
-            $params = Get-Content objectArray.json
-            $objectArrayFromJson = $params | ConvertFrom-Json
-            write-output $objectArrayFromJson
-              foreach ($param in $objectArrayFromJson){
-                    set-location -path $param.paramRootPath
-                    az account set --subscription  ${{ env.test_subscription_id }}
-                    az deployment sub create `
-                      --name 'deploy_project_resourcegroup' `
-                      --location '${{ env.location }}' `
-                      --subscription ${{ env.test_subscription_id }} `
-                      --template-file $param.templateFile `
-                      --parameters $param.paramFileName
-              }
-          azPSVersion: latest 
+      # - name: Deploy a Resource
+      #   uses: azure/powershell@v1
+      #   with:
+      #     inlineScript: |
+      #       $params = Get-Content objectArray.json
+      #       $objectArrayFromJson = $params | ConvertFrom-Json
+      #       foreach ($param in $objectArrayFromJson){
+      #             set-location -path $param.paramRootPath
+      #             az account set --subscription  ${{ env.test_subscription_id }}
+      #             az deployment sub create `
+      #               --name 'deploy_project_resourcegroup' `
+      #               --location '${{ env.location }}' `
+      #               --subscription ${{ env.test_subscription_id }} `
+      #               --template-file $param.templateFile `
+      #               --parameters $param.paramFileName
+      #       }
+      #     azPSVersion: latest 
