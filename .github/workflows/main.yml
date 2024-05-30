@@ -43,13 +43,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3.3.0
 
-      - name: Login to Azure
-        uses: azure/login@v1.4.6
-        with:
-          client-id: ${{ needs.initialise_vars.outputs.oidc_app_reg_client_id }}
-          tenant-id: ${{ needs.initialise_vars.outputs.azure_tenant_id }}
-          allow-no-subscriptions: true
-          enable-AzPSSession: true
+      # - name: Login to Azure
+      #   uses: azure/login@v1.4.6
+      #   with:
+      #     client-id: ${{ needs.initialise_vars.outputs.oidc_app_reg_client_id }}
+      #     tenant-id: ${{ needs.initialise_vars.outputs.azure_tenant_id }}
+      #     allow-no-subscriptions: true
+      #     enable-AzPSSession: true
 
       - name: Get all changed param files
         id: changed-markdown-files
@@ -70,71 +70,71 @@ jobs:
           done          
           
 
-      - name: Sets Environment Variables
-        env:
-          ALL_CHANGED_FILES: ${{ steps.changed-markdown-files.outputs.all_changed_files }}
-        uses: azure/powershell@v1
-        with:
-          inlineScript: |
-                $Results = @()
-                $filePaths= "${{ env.ALL_CHANGED_FILES }}"
-                $splitFilePaths =$filePaths.Split(" ")
-                if ($splitFilePaths) {
-                  foreach ($filePath in $splitFilePaths){
-                      $fileContent = Get-Content -Path $filePath
-                      $searchPattern = "using"
-                      $templateFilePath = $fileContent | ForEach-Object {
-                          # Check if the line contains the search pattern
-                          if ($_ -match $searchPattern) {
-                              # Capture the part between single quotes
-                              if ($_ -match "'([^']*)'") {
-                                  $capturedText = $matches[1]
-                                  Write-Output $capturedText
-                              }
-                          }
-                      } 
-                      $templateFilePath
-                      $paramRootPath = Split-Path -parent $filePath
-                      $paramFileName = Split-Path -leaf $filePath
-                      $obj = New-Object -TypeName psobject 
-                      $obj | Add-member -name 'templateFilePath' -Membertype "Noteproperty" -Value $templateFilePath
-                      $obj | Add-member -name 'paramRootPath' -Membertype "Noteproperty" -Value $paramRootPath
-                      $obj | Add-member -name 'paramFileName' -Membertype "Noteproperty" -Value $paramFileName
-                      $Results += $obj
-                    }
+      # - name: Sets Environment Variables
+      #   env:
+      #     ALL_CHANGED_FILES: ${{ steps.changed-markdown-files.outputs.all_changed_files }}
+      #   uses: azure/powershell@v1
+      #   with:
+      #     inlineScript: |
+      #           $Results = @()
+      #           $filePaths= "${{ env.ALL_CHANGED_FILES }}"
+      #           $splitFilePaths =$filePaths.Split(" ")
+      #           if ($splitFilePaths) {
+      #             foreach ($filePath in $splitFilePaths){
+      #                 $fileContent = Get-Content -Path $filePath
+      #                 $searchPattern = "using"
+      #                 $templateFilePath = $fileContent | ForEach-Object {
+      #                     # Check if the line contains the search pattern
+      #                     if ($_ -match $searchPattern) {
+      #                         # Capture the part between single quotes
+      #                         if ($_ -match "'([^']*)'") {
+      #                             $capturedText = $matches[1]
+      #                             Write-Output $capturedText
+      #                         }
+      #                     }
+      #                 } 
+      #                 $templateFilePath
+      #                 $paramRootPath = Split-Path -parent $filePath
+      #                 $paramFileName = Split-Path -leaf $filePath
+      #                 $obj = New-Object -TypeName psobject 
+      #                 $obj | Add-member -name 'templateFilePath' -Membertype "Noteproperty" -Value $templateFilePath
+      #                 $obj | Add-member -name 'paramRootPath' -Membertype "Noteproperty" -Value $paramRootPath
+      #                 $obj | Add-member -name 'paramFileName' -Membertype "Noteproperty" -Value $paramFileName
+      #                 $Results += $obj
+      #               }
                     
-                  }  
-                else {
-                    Write-Host "A line starting with 'using '<space>' was not found in the file."
-                }
+      #             }  
+      #           else {
+      #               Write-Host "A line starting with 'using '<space>' was not found in the file."
+      #           }
 
-                $jsonString = $Results | ConvertTo-Json
-                $jsonString | Out-File -FilePath objectArray.json
+      #           $jsonString = $Results | ConvertTo-Json
+      #           $jsonString | Out-File -FilePath objectArray.json
 
-                # echo "paramFileArray="$jsonString"" >> $env:GITHUB_ENV
+      #           # echo "paramFileArray="$jsonString"" >> $env:GITHUB_ENV
                 
-          azPSVersion: latest    
+      #     azPSVersion: latest    
   
-      - name: Preview a Resource
-        uses: azure/powershell@v1
-        with:
-          inlineScript: |
-            $params = Get-Content objectArray.json
-            $objectArrayFromJson = $params | ConvertFrom-Json
-            write-output $objectArrayFromJson
-            foreach ($param in $objectArrayFromJson){
-                  push-location $param.paramRootPath
-                  az account set --subscription  ${{ env.test_subscription_id }}
-                  az deployment sub what-if `
-                    --name 'deploy_project_resourcegroup' `
-                    --location '${{ env.location }}' `
-                    --subscription ${{ env.test_subscription_id }} `
-                    --template-file $param.templateFilePath `
-                    --parameters $param.paramFileName                
-                  pop-location
-                  write-output "Current directory: $(Get-Location)"
-            }
-          azPSVersion: latest     
+      # - name: Preview a Resource
+      #   uses: azure/powershell@v1
+      #   with:
+      #     inlineScript: |
+      #       $params = Get-Content objectArray.json
+      #       $objectArrayFromJson = $params | ConvertFrom-Json
+      #       write-output $objectArrayFromJson
+      #       foreach ($param in $objectArrayFromJson){
+      #             push-location $param.paramRootPath
+      #             az account set --subscription  ${{ env.test_subscription_id }}
+      #             az deployment sub what-if `
+      #               --name 'deploy_project_resourcegroup' `
+      #               --location '${{ env.location }}' `
+      #               --subscription ${{ env.test_subscription_id }} `
+      #               --template-file $param.templateFilePath `
+      #               --parameters $param.paramFileName                
+      #             pop-location
+      #             write-output "Current directory: $(Get-Location)"
+      #       }
+      #     azPSVersion: latest     
 
       # - name: Deploy a Resource
       #   uses: azure/powershell@v1
