@@ -57,7 +57,7 @@ jobs:
         with:
           # Avoid using single or double quotes for multiline patterns
           files: |
-            test/*.bicepparam
+            bicep/test/*.bicepparam
 
 
       - name: List all changed files markdown files
